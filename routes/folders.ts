@@ -1,5 +1,7 @@
-// apps/api/routes/folders.ts
-import { Router } from "express";
+// apps/api/routes/folders.ts`
+import { Router, Response } from "express";
+import { AuthRequests } from "../types/AuthRequests";
+
 import { supabase } from "../db";
 import { authenticate, AuthRequest } from "../middleware/authMiddleware";
 

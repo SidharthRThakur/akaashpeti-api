@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { Router, Response } from "express";
+import { AuthRequests } from "../types/AuthRequests";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { supabase } from "../db";

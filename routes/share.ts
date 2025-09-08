@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { authenticate } from "../middleware/authMiddleware";
 import { supabase } from "../db";
+import { AuthRequests } from "../types/AuthRequests";
 
 const router = Router();
 

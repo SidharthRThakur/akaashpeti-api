@@ -1,6 +1,7 @@
 // apps/api/routes/files.ts
 // Updated — ensures storage_path is always set, correct backend labels, improved logging
-import { Router } from "express";
+import { Router, Response } from "express";
+import { AuthRequests } from "../types/AuthRequests";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
