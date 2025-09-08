@@ -3,31 +3,17 @@ import { AuthRequests } from "../types/AuthRequests";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { supabase } from "../db";
-import { authenticate, AuthRequest } from "../middleware/authMiddleware";
+import { authenticate, AuthRequest } from "../middleware/authMiddleware"; // ✅ kept for bundle alignment
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
-/**
- * ✅ Register Route
- */
-router.post("/register", async (req, res) => {
+// ----------------------
+// Signup
+// ----------------------
+router.post("/signup", async (req: AuthRequests, res: Response) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
-
-    const { data: existingUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (existingUser) {
-      return res.status(400).json({ error: "User already exists" });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const { data, error } = await supabase
@@ -36,31 +22,22 @@ router.post("/register", async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) return res.status(400).json({ error: error.message });
 
-    const token = jwt.sign(
-      { id: data.id, email: data.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    res.status(201).json({ token, user: { id: data.id, email: data.email } });
+    const token = jwt.sign({ id: data.id, email }, JWT_SECRET, { expiresIn: "7d" });
+    res.json({ token, user: { id: data.id, email } });
   } catch (err: any) {
-    console.error("Register Error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("[auth.ts] signup error:", err);
+    res.status(500).json({ error: "Signup failed" });
   }
 });
 
-/**
- * ✅ Login Route
- */
-router.post("/login", async (req, res) => {
+// ----------------------
+// Login
+// ----------------------
+router.post("/login", async (req: AuthRequests, res: Response) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
 
     const { data: user, error } = await supabase
       .from("users")
@@ -68,51 +45,16 @@ router.post("/login", async (req, res) => {
       .eq("email", email)
       .single();
 
-    if (error || !user) {
-      return res.status(400).json({ error: "Invalid email or password" });
-    }
+    if (error || !user) return res.status(401).json({ error: "Invalid credentials" });
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).json({ error: "Invalid email or password" });
-    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    res.json({ token, user: { id: user.id, email: user.email } });
+    const token = jwt.sign({ id: user.id, email }, JWT_SECRET, { expiresIn: "7d" });
+    res.json({ token, user: { id: user.id, email } });
   } catch (err: any) {
-    console.error("Login Error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * ✅ Current User Profile Route
- */
-router.get("/me", authenticate, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const { data, error } = await supabase
-      .from("users")
-      .select("id,email,name,image_url,created_at")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: "User not found" });
-
-    res.json({ user: data });
-  } catch (err: any) {
-    console.error("GET /me error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("[auth.ts] login error:", err);
+    res.status(500).json({ error: "Login failed" });
   }
 });
 
