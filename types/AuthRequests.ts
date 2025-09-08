@@ -1,5 +1,4 @@
 import { Request } from "express";
-import type { File as MulterFile } from "multer"; // ✅ import multer's File type
 
 export interface AuthRequests extends Request {
   user?: {
@@ -8,6 +7,7 @@ export interface AuthRequests extends Request {
   };
   body: any;
   params: any;
-  file?: MulterFile;           // ✅ correct typing
-  files?: MulterFile[];        // ✅ allow multiple uploads
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
+//new used 
