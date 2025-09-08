@@ -1,0 +1,118 @@
+import { Router } from "express";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { supabase } from "../db";
+import { authenticate, AuthRequest } from "../middleware/authMiddleware";
+
+const router = Router();
+
+/**
+ * ✅ Register Route
+ */
+router.post("/register", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { data, error } = await supabase
+      .from("users")
+      .insert([{ email, password: hashedPassword }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const token = jwt.sign(
+      { id: data.id, email: data.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({ token, user: { id: data.id, email: data.email } });
+  } catch (err: any) {
+    console.error("Register Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * ✅ Login Route
+ */
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (error || !user) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    res.json({ token, user: { id: user.id, email: user.email } });
+  } catch (err: any) {
+    console.error("Login Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * ✅ Current User Profile Route
+ */
+router.get("/me", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("id,email,name,image_url,created_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "User not found" });
+
+    res.json({ user: data });
+  } catch (err: any) {
+    console.error("GET /me error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;
