@@ -10,7 +10,7 @@ const router = Router();
 /**
  * Register Route
  */
-router.post("/register", async (req, res) => {
+router.post("/signup", async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: "Email and password required" });
@@ -25,7 +25,7 @@ router.post("/register", async (req, res) => {
     const token = jwt.sign({ id: data.id, email: data.email }, process.env.JWT_SECRET!, { expiresIn: "7d" });
     res.status(201).json({ token, user: { id: data.id, email: data.email } });
   } catch (err: any) {
-    console.error("Register Error:", err);
+    console.error("Sigu up Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
