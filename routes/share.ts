@@ -27,7 +27,7 @@ router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
       .insert([
         {
           file_id,
-          shared_with: user.id, // ✅ correct UUID
+          shared_with: user.id,
           access_level,
           owner_id: ownerId,
           created_at: new Date().toISOString(),
@@ -37,10 +37,32 @@ router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
       .single();
 
     if (shareError) throw shareError;
+
     res.json({ message: "File shared", share });
   } catch (err: any) {
-    console.error("[share.ts] error:", err);
+    console.error("[share.ts][POST] error:", err);
     res.status(500).json({ error: err?.message || "Share failed" });
+  }
+});
+
+// ----------------------
+// Get shared files
+// ----------------------
+router.get("/", authenticate, async (req: AuthRequests, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    const { data, error } = await supabase
+      .from("shares")
+      .select("*")
+      .eq("shared_with", userId);
+
+    if (error) throw error;
+
+    res.json({ sharedItems: data });
+  } catch (err: any) {
+    console.error("[share.ts][GET] error:", err);
+    res.status(500).json({ error: err?.message || "Failed to fetch shared files" });
   }
 });
 
