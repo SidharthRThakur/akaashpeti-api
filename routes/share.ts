@@ -5,7 +5,7 @@ import { AuthRequests } from "../types/AuthRequests";
 
 const router = Router();
 
-// Share a file
+// Share a file or folder
 router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const { file_id, email, access_level } = req.body;
@@ -20,14 +20,15 @@ router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
 
     if (userError || !user) return res.status(404).json({ error: "User not found" });
 
-    const { data: share, error: shareError } = await supabase
-      .from("shares")
+    const { data: sharedItem, error: shareError } = await supabase
+      .from("shared_items") // Correct table name
       .insert([
         {
-          file_id,
-          shared_with: user.id,
-          access_level,
+          item_id: file_id,       // Correct column
+          item_type: "file",      // Assuming you're sharing files (could be dynamic)
           owner_id: ownerId,
+          shared_with: user.id,
+          role: access_level,     // Correct column
           created_at: new Date().toISOString(),
         },
       ])
@@ -36,20 +37,20 @@ router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
 
     if (shareError) throw shareError;
 
-    res.json({ message: "File shared", share });
+    res.json({ message: "Item shared", sharedItem });
   } catch (err: any) {
     console.error("[share.ts][POST] error:", err);
     res.status(500).json({ error: err?.message || "Share failed" });
   }
 });
 
-// Get shared files
+// Get shared items
 router.get("/", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const userId = req.user?.id;
 
     const { data, error } = await supabase
-      .from("shares")
+      .from("shared_items") // Correct table name
       .select("*")
       .eq("shared_with", userId);
 
@@ -58,7 +59,7 @@ router.get("/", authenticate, async (req: AuthRequests, res: Response) => {
     res.json({ sharedItems: data });
   } catch (err: any) {
     console.error("[share.ts][GET] error:", err);
-    res.status(500).json({ error: err?.message || "Failed to fetch shared files" });
+    res.status(500).json({ error: err?.message || "Failed to fetch shared items" });
   }
 });
 

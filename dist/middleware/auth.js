@@ -13,7 +13,7 @@ const router = (0, express_1.Router)();
 /**
  * Register Route
  */
-router.post("/register", async (req, res) => {
+router.post("/signup", async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password)
@@ -29,7 +29,7 @@ router.post("/register", async (req, res) => {
         res.status(201).json({ token, user: { id: data.id, email: data.email } });
     }
     catch (err) {
-        console.error("Register Error:", err);
+        console.error("Sigu up Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
