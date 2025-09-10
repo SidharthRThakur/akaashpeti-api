@@ -4,7 +4,7 @@ import { authenticate } from "../middleware/authMiddleware";
 import { AuthRequests } from "../types/AuthRequests";
 
 const router = Router();
-
+console.log("[share.ts] share route successfully loaded");
 // Share a file or folder
 router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
   try {
