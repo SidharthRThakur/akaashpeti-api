@@ -5,9 +5,7 @@ import { AuthRequests } from "../types/AuthRequests";
 
 const router = Router();
 
-// ----------------------
 // Share a file
-// ----------------------
 router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const { file_id, email, access_level } = req.body;
@@ -45,9 +43,7 @@ router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
   }
 });
 
-// ----------------------
 // Get shared files
-// ----------------------
 router.get("/", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const userId = req.user?.id;
