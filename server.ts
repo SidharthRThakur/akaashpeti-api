@@ -29,7 +29,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/folders", folderRoutes);
 app.use("/api/trash", trashRoutes);
-app.use("/api/share", shareRoutes);
+// app.use("/api/share", shareRoutes);
+app.use("/api", shareRoutes);
 
 // Start server
 app.listen(PORT, () => {
