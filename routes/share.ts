@@ -4,62 +4,78 @@ import { authenticate } from "../middleware/authMiddleware";
 import { AuthRequests } from "../types/AuthRequests";
 
 const router = Router();
-console.log("[share.ts] share route successfully loaded");
+console.log("[share.ts] Share routes loaded");
+
+// ----------------------
 // Share a file or folder
-router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
+// ----------------------
+router.post("/share", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const { file_id, email, access_level } = req.body;
     const ownerId = req.user?.id;
 
-    // Lookup user by email
+    if (!file_id || !email || !access_level) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id")
       .eq("email", email)
       .single();
 
-    if (userError || !user) return res.status(404).json({ error: "User not found" });
+    if (userError || !user) {
+      return res.status(404).json({ error: "Recipient user not found" });
+    }
 
     const { data: sharedItem, error: shareError } = await supabase
-      .from("shared_items") // Correct table name
+      .from("shared_items")
       .insert([
         {
-          item_id: file_id,       // Correct column
-          item_type: "file",      // Assuming you're sharing files (could be dynamic)
+          item_id: file_id,
+          item_type: "file",
           owner_id: ownerId,
           shared_with: user.id,
-          role: access_level,     // Correct column
+          role: access_level,
           created_at: new Date().toISOString(),
         },
       ])
       .select()
       .single();
 
-    if (shareError) throw shareError;
+    if (shareError) {
+      console.error("[share.ts][POST] Share failed:", shareError);
+      return res.status(500).json({ error: "Failed to share item" });
+    }
 
-    res.json({ message: "Item shared", sharedItem });
+    res.json({ message: "Item shared successfully", sharedItem });
   } catch (err: any) {
-    console.error("[share.ts][POST] error:", err);
-    res.status(500).json({ error: err?.message || "Share failed" });
+    console.error("[share.ts][POST] Unexpected error:", err);
+    res.status(500).json({ error: err?.message || "Unexpected error occurred" });
   }
 });
 
-// Get shared items
-router.get("/", authenticate, async (req: AuthRequests, res: Response) => {
+// ----------------------
+// Get items shared with the user
+// ----------------------
+router.get("/shared", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const userId = req.user?.id;
 
     const { data, error } = await supabase
-      .from("shared_items") // Correct table name
+      .from("shared_items")
       .select("*")
       .eq("shared_with", userId);
 
-    if (error) throw error;
+    if (error) {
+      console.error("[share.ts][GET] Fetch failed:", error);
+      return res.status(500).json({ error: "Failed to fetch shared items" });
+    }
 
     res.json({ sharedItems: data });
   } catch (err: any) {
-    console.error("[share.ts][GET] error:", err);
-    res.status(500).json({ error: err?.message || "Failed to fetch shared items" });
+    console.error("[share.ts][GET] Unexpected error:", err);
+    res.status(500).json({ error: err?.message || "Unexpected error occurred" });
   }
 });
 
