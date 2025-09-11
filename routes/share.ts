@@ -67,16 +67,14 @@ router.get("/shared", authenticate, async (req: AuthRequests, res: Response) => 
       .select("*")
       .eq("shared_with", userId);
 
-    if (error) {
-      console.error("[share.ts][GET] Fetch failed:", error);
-      return res.status(500).json({ error: "Failed to fetch shared items" });
-    }
+    if (error) throw error;
 
     res.json({ sharedItems: data });
   } catch (err: any) {
-    console.error("[share.ts][GET] Unexpected error:", err);
-    res.status(500).json({ error: err?.message || "Unexpected error occurred" });
+    console.error("[share.ts][GET /shared] error:", err);
+    res.status(500).json({ error: err?.message || "Failed to fetch shared items" });
   }
 });
+
 
 export default router;
