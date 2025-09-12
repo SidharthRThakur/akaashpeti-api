@@ -6,10 +6,8 @@ import { AuthRequests } from "../types/AuthRequests";
 const router = Router();
 console.log("[share.ts] Share routes loaded");
 
-// ----------------------
-// Share a file or folder
-// ----------------------
-router.post("/share", authenticate, async (req: AuthRequests, res: Response) => {
+// POST /api/share
+router.post("/", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const { file_id, email, access_level } = req.body;
     const ownerId = req.user?.id;
@@ -33,7 +31,7 @@ router.post("/share", authenticate, async (req: AuthRequests, res: Response) => 
       .insert([
         {
           item_id: file_id,
-          item_type: "file", // You can later make this dynamic if needed
+          item_type: "file",
           owner_id: ownerId,
           shared_with: user.id,
           role: access_level,
@@ -55,43 +53,19 @@ router.post("/share", authenticate, async (req: AuthRequests, res: Response) => 
   }
 });
 
-// ----------------------
-// Get items shared with the user
-// ----------------------
+// GET /api/share/shared
 router.get("/shared", authenticate, async (req: AuthRequests, res: Response) => {
   try {
     const userId = req.user?.id;
 
-    const { data: sharedItems, error } = await supabase
+    const { data, error } = await supabase
       .from("shared_items")
       .select("*")
       .eq("shared_with", userId);
 
     if (error) throw error;
 
-    const detailedItems = await Promise.all(
-      sharedItems.map(async (item: any) => {
-        let name = "Unknown";
-        if (item.item_type === "file") {
-          const { data: file } = await supabase
-            .from("files")
-            .select("name")
-            .eq("id", item.item_id)
-            .single();
-          name = file?.name || "Unknown File";
-        } else if (item.item_type === "folder") {
-          const { data: folder } = await supabase
-            .from("folders")
-            .select("name")
-            .eq("id", item.item_id)
-            .single();
-          name = folder?.name || "Unknown Folder";
-        }
-        return { ...item, name };
-      })
-    );
-
-    res.json({ sharedItems: detailedItems });
+    res.json({ sharedItems: data });
   } catch (err: any) {
     console.error("[share.ts][GET /shared] error:", err);
     res.status(500).json({ error: err?.message || "Failed to fetch shared items" });
