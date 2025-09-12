@@ -58,50 +58,24 @@ router.get("/shared", authenticate, async (req: AuthRequests, res: Response) => 
   try {
     const userId = req.user?.id;
 
-    const { data: sharedItems, error: sharedError } = await supabase
+    const { data: sharedWithMe, error: sharedWithMeError } = await supabase
       .from("shared_items")
       .select("*")
       .eq("shared_with", userId);
 
-    if (sharedError) throw sharedError;
+    if (sharedWithMeError) throw sharedWithMeError;
 
-    const detailedSharedItems = await Promise.all(
-      sharedItems.map(async (item: any) => {
-        let name = "Unknown";
-        if (item.item_type === "file") {
-          const { data: fileData, error: fileError } = await supabase
-            .from("files")
-            .select("name")
-            .eq("id", item.item_id)
-            .single();
-          if (!fileError && fileData) {
-            name = fileData.name;
-          }
-        } else if (item.item_type === "folder") {
-          const { data: folderData, error: folderError } = await supabase
-            .from("folders")
-            .select("name")
-            .eq("id", item.item_id)
-            .single();
-          if (!folderError && folderData) {
-            name = folderData.name;
-          }
-        }
+    const { data: sharedByMe, error: sharedByMeError } = await supabase
+      .from("shared_items")
+      .select("*")
+      .eq("owner_id", userId);
 
-        return {
-          id: item.id,
-          item_id: item.item_id,
-          item_type: item.item_type,
-          owner_id: item.owner_id,
-          shared_with: item.shared_with,
-          role: item.role,
-          created_at: item.created_at,
-          name, // Add the file/folder name
-        };
-      })
-    );
+    if (sharedByMeError) throw sharedByMeError;
 
-    res.json({ sharedItems: detailedSharedItems });
+    res.json({
+      sharedWithMe: sharedWithMe || [],
+      sharedByMe: sharedByMe || [],
+    });
   } catch (err: any) {
     console.error("[share.ts][GET /shared] error:", err);
     res.status(500).json({ error: err?.message || "Failed to fetch shared items" });
