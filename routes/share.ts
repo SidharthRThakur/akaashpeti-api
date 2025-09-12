@@ -58,18 +58,55 @@ router.get("/shared", authenticate, async (req: AuthRequests, res: Response) => 
   try {
     const userId = req.user?.id;
 
-    const { data, error } = await supabase
+    const { data: sharedItems, error: sharedError } = await supabase
       .from("shared_items")
       .select("*")
       .eq("shared_with", userId);
 
-    if (error) throw error;
+    if (sharedError) throw sharedError;
 
-    res.json({ sharedItems: data });
+    const detailedSharedItems = await Promise.all(
+      sharedItems.map(async (item: any) => {
+        let name = "Unknown";
+        if (item.item_type === "file") {
+          const { data: fileData, error: fileError } = await supabase
+            .from("files")
+            .select("name")
+            .eq("id", item.item_id)
+            .single();
+          if (!fileError && fileData) {
+            name = fileData.name;
+          }
+        } else if (item.item_type === "folder") {
+          const { data: folderData, error: folderError } = await supabase
+            .from("folders")
+            .select("name")
+            .eq("id", item.item_id)
+            .single();
+          if (!folderError && folderData) {
+            name = folderData.name;
+          }
+        }
+
+        return {
+          id: item.id,
+          item_id: item.item_id,
+          item_type: item.item_type,
+          owner_id: item.owner_id,
+          shared_with: item.shared_with,
+          role: item.role,
+          created_at: item.created_at,
+          name, // Add the file/folder name
+        };
+      })
+    );
+
+    res.json({ sharedItems: detailedSharedItems });
   } catch (err: any) {
     console.error("[share.ts][GET /shared] error:", err);
     res.status(500).json({ error: err?.message || "Failed to fetch shared items" });
   }
 });
+
 
 export default router;
